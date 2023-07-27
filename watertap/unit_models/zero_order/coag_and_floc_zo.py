@@ -375,3 +375,7 @@ class CoagulationFlocculationZOData(ZeroOrderBaseData):
         blk.config.flowsheet_costing_block.cost_flow(
             blk.unit_model.electricity[t0], "electricity"
         )
+
+        blk.config.flowsheet_costing_block.cost_flow(
+            blk.unit_model.chemical_flow_mass[t0, "alum"], "alum"
+        )

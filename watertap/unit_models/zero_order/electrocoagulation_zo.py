@@ -20,6 +20,7 @@ from pyomo.environ import (
     PositiveReals,
     Constraint,
     Expression,
+    log,
     units as pyunits,
 )
 from pyomo.common.config import ConfigValue, In
@@ -51,6 +52,10 @@ class ReactorMaterial(StrEnum):
     pvc = "pvc"
     stainless_steel = "stainless_steel"
 
+class OverpotentialCalculation(StrEnum):
+    nernst = "nernst"
+    fixed = "fixed"
+    regression = "regression"
 
 @declare_process_block_class("ElectrocoagulationZO")
 class ElectrocoagulationZOData(ZeroOrderBaseData):
@@ -75,6 +80,15 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
             default="pvc",
             domain=In(ReactorMaterial),
             description="Reactor material",
+        ),
+    )
+
+    CONFIG.declare(
+        "overpotential_calculation",
+        ConfigValue(
+            default="fixed",
+            domain=In(OverpotentialCalculation),
+            description="Determination of overpotential",
         ),
     )
 
@@ -295,7 +309,48 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
         self._fixed_perf_vars.append(self.number_electrode_pairs)
         self._fixed_perf_vars.append(self.electrode_gap)
         self._fixed_perf_vars.append(self.current_efficiency)
-        self._fixed_perf_vars.append(self.overpotential)
+        
+        if self.config.overpotential_calculation is OverpotentialCalculation.fixed:
+            self._fixed_perf_vars.append(self.overpotential)
+
+        if self.config.overpotential_calculation == OverpotentialCalculation.regression:
+
+            self.overpotential_k1 = Var(
+                units=pyunits.millivolt,
+                doc="Constant k1 in overpotential equation",
+            )
+
+            self.overpotential_k2 = Var(
+                units=pyunits.millivolt,
+                doc="Constant k2 in overpotential equation",
+            )
+
+            @self.Constraint(doc="Overpotential calculation")
+            def eq_overpotential(b):
+                cd = pyunits.convert(
+                    b.current_density, to_units=pyunits.milliampere / pyunits.cm**2
+                )
+                cd_dimensionless = pyunits.convert(
+                    cd * pyunits.cm**2 / pyunits.milliampere,
+                    to_units=pyunits.dimensionless,
+                )
+                ea_tot = pyunits.convert(
+                    b.electrode_area_total, to_units=pyunits.cm**2
+                )
+                return b.overpotential == pyunits.convert(
+                    (
+                        (
+                            cd
+                            * (
+                                b.overpotential_k1 * log(cd_dimensionless)
+                                + b.overpotential_k2
+                            )
+                        )
+                        * ea_tot
+                    )
+                    / b.applied_current,
+                    to_units=pyunits.volt,
+                )
 
         @self.Constraint(doc="Charge loading rate equation")
         def eq_charge_loading_rate(b):
@@ -333,10 +388,11 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
                 == b.overpotential + b.applied_current * b.ohmic_resistance
             )
 
+        # b.electrode_pairs was originally multiplied by 2. Removed it
         @self.Constraint(doc="Area per electrode")
         def eq_electrode_area_per(b):
             return b.electrode_area_per == b.electrode_area_total / (
-                b.number_electrode_pairs * 2
+                b.number_electrode_pairs
             )
 
         @self.Constraint(doc="Electrode width")
@@ -490,14 +546,14 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
 
         if electrode_mat == "aluminum":
             # Reference for Al cost: Anuf et al., 2022 - https://doi.org/https://doi.org/10.1016/j.jwpe.2022.103074
-            costing.defined_flows["aluminum"] = 2.23 * base_currency / pyunits.kg
-            costing.register_flow_type("aluminum", 2.23 * base_currency / pyunits.kg)
+            costing.defined_flows["aluminum"] = 2.23 * pyunits.USD_2020 / pyunits.kg
+            costing.register_flow_type("aluminum", 2.23 * pyunits.USD_2020/ pyunits.kg)
             costing_ec.electrode_material_cost.fix(2.23)
 
         if electrode_mat == "iron":
             # Reference for Fe cost: Anuf et al., 2022 - https://doi.org/https://doi.org/10.1016/j.jwpe.2022.103074
-            costing.defined_flows["iron"] = 3.41 * base_currency / pyunits.kg
-            costing.register_flow_type("iron", 3.41 * base_currency / pyunits.kg)
+            costing.defined_flows["iron"] = 3.41 * pyunits.USD_2020 / pyunits.kg
+            costing.register_flow_type("iron", 3.41 * pyunits.USD_2020/ pyunits.kg)
             costing_ec.electrode_material_cost.fix(3.41)
 
         if reactor_mat == "stainless_steel":
@@ -523,28 +579,28 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
 
         blk.capital_cost_reactor = Var(
             initialize=1e4,
-            units=pyunits.dimensionless,
+            units=base_currency,#pyunits.dimensionless,
             bounds=(0, None),
             doc="Cost of EC reactor",
         )
 
         blk.capital_cost_electrodes = Var(
             initialize=1e4,
-            units=pyunits.dimensionless,
+            units=base_currency,#pyunits.dimensionless,
             bounds=(0, None),
             doc="Cost of EC electrodes",
         )
 
         blk.capital_cost_power_supply = Var(
             initialize=1e6,
-            units=pyunits.dimensionless,
+            units=base_currency,#pyunits.dimensionless,
             bounds=(0, None),
             doc="Cost of EC power supply",
         )
 
         blk.capital_cost_admin_lab = Var(
             initialize=1e4,
-            units=pyunits.dimensionless,
+            units=base_currency,#pyunits.dimensionless,
             bounds=(0, None),
             doc="Cost of administration + lab + building, etc.",
         )
@@ -579,7 +635,7 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
             expr=blk.capital_cost_reactor
             == (
                 (
-                    ec_reactor_cap_base
+                    pyunits.convert(ec_reactor_cap_base,base_currency)
                     * (
                         ec.reactor_volume
                         * blk.number_EC_reactors
@@ -600,18 +656,18 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
                 * 2
                 * blk.number_EC_reactors
             )
-            * electrode_material_cost
+            * pyunits.convert(electrode_material_cost,base_currency/pyunits.kg)
             * electrode_material_cost_coeff
         )
 
         blk.capital_cost_power_supply_constraint = Constraint(
             expr=blk.capital_cost_power_supply
-            == (ec_power_supply_base_slope * ec.power_required) * blk.number_EC_reactors
+            == (pyunits.convert(ec_power_supply_base_slope,base_currency/pyunits.W) * ec.power_required) * blk.number_EC_reactors
         )
 
         blk.capital_cost_other_constraint = Constraint(
             expr=blk.capital_cost_admin_lab
-            == ec_admin_lab_cap_base * flow_mgd**ec_admin_lab_cap_exp
+            == pyunits.convert(ec_admin_lab_cap_base,base_currency) * flow_mgd**ec_admin_lab_cap_exp
         )
 
         blk.capital_cost_constraint = Constraint(
@@ -623,17 +679,17 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
         )
 
         blk.annual_labor_maintenance_constraint = Constraint(
-            expr=blk.annual_labor_maintenance == flow_m3_yr * ec_labor_maint_factor
+            expr=blk.annual_labor_maintenance == flow_m3_yr * pyunits.convert(ec_labor_maint_factor,base_currency/pyunits.m**3)
         )
 
         blk.annual_sludge_management_constraint = Constraint(
             expr=blk.annual_sludge_management
-            == blk.annual_sludge_flow * sludge_handling_cost
+            == blk.annual_sludge_flow * pyunits.convert(sludge_handling_cost , base_currency/pyunits.kg)
         )
 
         blk.annual_admin_lab_constraint = Constraint(
             expr=blk.annual_admin_lab
-            == ec_admin_lab_op_base * flow_mgd**ec_admin_lab_op_exp
+            == pyunits.convert(ec_admin_lab_op_base, base_currency/pyunits.year) * flow_mgd**ec_admin_lab_op_exp
         )
 
         blk.fixed_operating_cost_constraint = Constraint(
