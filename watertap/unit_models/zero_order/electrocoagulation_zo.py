@@ -228,11 +228,11 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
             doc="Electrode gap",
         )
 
-        # self.electrolysis_time = Var(
-        #     initialize=30,
-        #     bounds=(2, 200),
-        #     units=pyunits.minute,
-        #     doc="Electrolysis time",
+        self.electrolysis_time = Var(
+            initialize=10,
+            bounds=(2, 200),
+            units=pyunits.minute,
+            doc="Electrolysis time for continous reactor",
         # )
 
         # self.number_electrode_pairs = Var(
@@ -444,7 +444,7 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
             return b.anode_area == b.applied_current / b.current_density
         
 
-        @self.Constraint(doc="Cell voltage")
+        @self.Constraint(doc="Cell voltage") # Abdiel - I'll be interesting to see how the consideration of non-equilibrium potentials and concentration overpotentials affect the voltage predictions in the model. See the following: https://doi.org/10.1016/j.cej.2019.123628 
         def eq_cell_voltage(b):
             return (
                 b.cell_voltage
@@ -538,6 +538,11 @@ class ElectrocoagulationZOData(ZeroOrderBaseData):
         @self.Constraint(doc="Power required")
         def eq_power_required(b):
             return b.power_required == b.cell_voltage * b.applied_current
+
+        @self.Constraint(doc="Electrolysis time") # Indicates contact time between the liquid and the applied electrical field -- may be important to some people in the case study development
+        def eq_electrolysis_time(b):
+            return b.electrolysis_time == b.reactor_volume / 
+            pyunits.convert(b.properties_in[0].flow_vol, to_units=pyunits.m**3 / pyunits.minute)
 
     @property
     def default_costing_method(self):
