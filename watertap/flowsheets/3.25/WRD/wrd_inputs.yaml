@@ -1,0 +1,83 @@
+feed_stream:
+  feed_flow_water: 
+    value: 0.154 
+    units: m**3/s
+  feed_density_water: 
+    value: 1000
+    units: kg/m**3
+  feed_conductivity: 
+    value: 1082
+    units: uS/cm
+  feed_conductivity_conversion: 
+    value: 0.5
+    units: mg/L/(uS/cm)
+  feed_temperature: 
+    value: 298.15
+    units: K
+  feed_pressure: 
+    value: 101325
+    units: Pa
+pumps:
+  pump_1:
+    pump_efficiency: 0.8  # unitless
+    pump_outlet_pressure: 
+      value: 153
+      units: psi 
+  pump_2:
+    pump_efficiency: 0.8  # unitless
+    pump_outlet_pressure: 
+      value: 400
+      units: psi  
+  pump_3:
+    pump_efficiency: 0.8  # unitless
+    pump_outlet_pressure: 
+      value: 500
+      units: psi
+
+reverse_osmosis_1d:
+  number_of_trains: 4  # unitless
+  stage_1:
+    A_comp: 0.66306e-11  # m/s/Pa
+    B_comp: 1.3019e-8  # m/s
+    channel_height: 
+      value: 86.36e-5 # 34 mil to m
+      units: m
+    element_membrane_area: 
+      value: 37  # m2
+      units: m**2
+    number_of_vessels: 72 # unitless
+    number_of_elements_per_vessel: 7  # unitless
+    element_length: 1.0  # m
+    spacer_porosity: 0.7211  # unitless
+    water_recovery_mass_phase: 0.6  # unitless
+
+  stage_2:
+    A_comp: 2.1192e-11  # m/s/Pa
+    B_comp: 3.2019e-8  # m/s
+    channel_height: 
+      value: 86.36e-5 # mil to m
+      units: m
+    number_of_vessels: 30 # unitless
+    number_of_elements_per_vessel: 7  # unitless
+    element_length: 1.0  # m
+    spacer_porosity: 0.7211   # unitless
+    water_recovery_mass_phase: 0.5  # unitless
+    element_membrane_area: 
+      value: 37  # m2
+      units: m**2
+
+  stage_3:
+    A_comp: 2.1192e-11  # m/s/Pa
+    B_comp: 3.2019e-8  # m/s
+    channel_height: 
+      value: 86.36e-5 # mil to m
+      units: m
+    element_membrane_area: 
+      value: 37  # m2
+      units: m**2
+    number_of_vessels: 15  # unitless
+    number_of_elements_per_vessel: 7  # unitless
+    element_length: 1.0  # m
+    spacer_porosity: 0.7211   # unitless
+    water_recovery_mass_phase: 0.5  # unitless
+      
