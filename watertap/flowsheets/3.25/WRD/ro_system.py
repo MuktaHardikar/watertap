@@ -116,26 +116,26 @@ def add_units(m):
     m.fs.pump1 = Pump(property_package=m.fs.properties)
 
     # Feed pump to second stage RO
-    m.fs.pump2 = Pump(property_package=m.fs.properties)
+    # m.fs.pump2 = Pump(property_package=m.fs.properties)
 
     # Feed pump to third stage RO
     # m.fs.pump3 = Pump(property_package=m.fs.properties)
 
     # Three stages of reverse osmosis
-    for i in range(1, 3):
+    for i in range(1, 2):
         setattr(
             m.fs,
             f"ro_stage_{i}",
             ReverseOsmosis1D(
                     property_package=m.fs.properties,
                     has_pressure_change=True,
-                    pressure_change_type=PressureChangeType.calculated,
+                    pressure_change_type=PressureChangeType.fixed_per_stage,
                     mass_transfer_coefficient=MassTransferCoefficient.calculated,
                     concentration_polarization_type=ConcentrationPolarizationType.calculated,
                     transformation_scheme="BACKWARD",
                     transformation_method="dae.finite_difference",
                     module_type="spiral_wound",
-                    finite_elements=7, 
+                    finite_elements=10, 
                     has_full_reporting=True,
             )
         )
@@ -179,7 +179,7 @@ def set_operation_conditions(m):
     Set the operation conditions for the RO system
     '''
     # Set pump operating conditions
-    for i in range(1, 3):
+    for i in range(1, 2):
         pump = getattr(m.fs, f"pump{i}")
         
         pump.control_volume.properties_out[0].pressure.fix(
@@ -190,7 +190,7 @@ def set_operation_conditions(m):
 
 
     # Set RO configuration for each stage
-    for i in range(1, 3):
+    for i in range(1, 2):
         ro_stage = getattr(m.fs, f"ro_stage_{i}")
 
         ro_stage.A_comp.fix(get_config_value(m.fs.config_data, "A_comp", "reverse_osmosis_1d", f"stage_{i}"))
@@ -199,10 +199,10 @@ def set_operation_conditions(m):
         ro_stage.feed_side.channel_height.fix(get_config_value(m.fs.config_data, "channel_height", "reverse_osmosis_1d", f"stage_{i}"))
         ro_stage.feed_side.spacer_porosity.fix(get_config_value(m.fs.config_data, "spacer_porosity", "reverse_osmosis_1d", f"stage_{i}"))
 
-        # ro_stage.feed_side.length.fix(
-        #     get_config_value(m.fs.config_data, "number_of_elements_per_vessel", "reverse_osmosis_1d", f"stage_{i}")*
-        #     get_config_value(m.fs.config_data, "element_length", "reverse_osmosis_1d", f"stage_{i}")
-        # )
+        ro_stage.feed_side.length.fix(
+            get_config_value(m.fs.config_data, "number_of_elements_per_vessel", "reverse_osmosis_1d", f"stage_{i}")*
+            get_config_value(m.fs.config_data, "element_length", "reverse_osmosis_1d", f"stage_{i}")
+        )
         
         ro_stage.area.fix(
             get_config_value(m.fs.config_data, "element_membrane_area", "reverse_osmosis_1d", f"stage_{i}")*
@@ -210,7 +210,7 @@ def set_operation_conditions(m):
             get_config_value(m.fs.config_data, "number_of_elements_per_vessel", "reverse_osmosis_1d", f"stage_{i}")
         )
 
-        # ro_stage.permeate.pressure[0].fix(101325)
+        ro_stage.permeate.pressure[0].fix(101325)
         pressure_loss = -9 * pyunits.psi
         ro_stage.deltaP.fix(pressure_loss)
         
@@ -380,4 +380,7 @@ if __name__ == "__main__":
         results = solver.solve(m, tee=False)
     except:
         print_infeasible_constraints(m)
-    
+
+    print("RO Stage 1 Feed Side Length:", m.fs.ro_stage_1.feed_side.length.value)
+    # print("RO Stage 2 Feed Side Length:", m.fs.ro_stage_2.feed_side.length.value)
+    # print("RO Stage 3 Feed Side Length:", m.fs.ro_stage_3.feed_side.length.value)
