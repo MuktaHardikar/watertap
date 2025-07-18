@@ -37,6 +37,8 @@ from idaes.core.util.scaling import (
     constraint_scaling_transform,
     calculate_scaling_factors,
     set_scaling_factor,
+    list_badly_scaled_variables,
+    extreme_jacobian_rows
 )
 
 import yaml
@@ -135,7 +137,7 @@ def add_units(m):
                     transformation_scheme="BACKWARD",
                     transformation_method="dae.finite_difference",
                     module_type="spiral_wound",
-                    finite_elements=10, 
+                    finite_elements=7, 
                     has_full_reporting=True,
             )
         )
@@ -203,14 +205,16 @@ def set_operation_conditions(m):
             get_config_value(m.fs.config_data, "number_of_elements_per_vessel", "reverse_osmosis_1d", f"stage_{i}")*
             get_config_value(m.fs.config_data, "element_length", "reverse_osmosis_1d", f"stage_{i}")
         )
-        
+        ro_stage.area.setub(1e7)
+        ro_stage.width.setub(1e6)
+
         ro_stage.area.fix(
             get_config_value(m.fs.config_data, "element_membrane_area", "reverse_osmosis_1d", f"stage_{i}")*
             get_config_value(m.fs.config_data, "number_of_vessels", "reverse_osmosis_1d", f"stage_{i}")*
             get_config_value(m.fs.config_data, "number_of_elements_per_vessel", "reverse_osmosis_1d", f"stage_{i}")
         )
 
-        ro_stage.permeate.pressure[0].fix(101325)
+        # ro_stage.mixed_permeate[0].pressure.fix(101325)
         pressure_loss = -9 * pyunits.psi
         ro_stage.deltaP.fix(pressure_loss)
         
@@ -299,6 +303,7 @@ def add_connections(m):
 
     return m
 
+
 def add_scaling(m):
     '''
     Add scaling to the units in the RO system
@@ -314,12 +319,45 @@ def add_scaling(m):
         calculate_scaling_factors(ro_stage)
 
         # Calculate RO scaling factors
+        set_scaling_factor(ro_stage.feed_side.length, 1e-1)
+        set_scaling_factor(ro_stage.feed_side.width, 1e-4)
+        set_scaling_factor(ro_stage.area, 1e-4)
         set_scaling_factor(ro_stage.feed_side.spacer_porosity, 1e-1)
         set_scaling_factor(ro_stage.feed_side.channel_height, 1e-5)
-        constraint_scaling_transform(ro_stage.feed_side.eq_dh, 1e-6)
-        constraint_scaling_transform(ro_stage.feed_side.eq_N_Re[0.0,1.0], 1e-6)
 
-        set_scaling_factor(ro_stage.area, 1e3)
+        # constraint_scaling_transform(ro_stage.eq_recovery_mass_phase_comp[0.0,"H2O"], 1e-8)
+        # constraint_scaling_transform(ro_stage.eq_permeate_production[0.0,"Liq","H2O"], 1e-9)
+        # constraint_scaling_transform(ro_stage.eq_permeate_production[0.0,"Liq","NaCl"], 1e-9)
+    
+        # constraint_scaling_transform(ro_stage.eq_recovery_vol_phase[0.0], 1e-8)      
+        for e in ro_stage.eq_flux_mass:
+            constraint_scaling_transform(ro_stage.eq_flux_mass[e], 1e-6)
+        # for e in ro_stage.eq_pressure_drop:    
+        #     constraint_scaling_transform(ro_stage.eq_pressure_drop[e], 1e-11)
+        # for e in ro_stage.feed_side.eq_N_Re:    
+        #     constraint_scaling_transform(ro_stage.feed_side.eq_N_Re[e], 1e-6)
+        # for e in ro_stage.feed_side.eq_N_Sh_comp:    
+        #     constraint_scaling_transform(ro_stage.feed_side.eq_N_Sh_comp[e], 1e-8)
+        # for e in ro_stage.feed_side.eq_N_Sc_comp:    
+        #     constraint_scaling_transform(ro_stage.feed_side.eq_N_Sc_comp[e], 1e-6)
+        for e in ro_stage.feed_side.eq_K:    
+            constraint_scaling_transform(ro_stage.feed_side.eq_K[e], 1e4)
+        # for e in ro_stage.feed_side.eq_cp_modulus:    
+        #     constraint_scaling_transform(ro_stage.feed_side.eq_cp_modulus[e], 1e-6)
+        
+        for e in ro_stage.eq_permeate_outlet_isobaric:    
+            constraint_scaling_transform(ro_stage.eq_permeate_outlet_isobaric[e], 1e-5)
+        for e in ro_stage.eq_pressure_drop:    
+                constraint_scaling_transform(ro_stage.eq_pressure_drop[e], 1e-8)
+
+        
+        for e in ro_stage.feed_side.eq_equal_pressure_interface:    
+            constraint_scaling_transform(ro_stage.feed_side.eq_equal_pressure_interface[e], 1e-5)
+
+        constraint_scaling_transform(ro_stage.feed_side.eq_dh, 1e-5)
+        constraint_scaling_transform(ro_stage.eq_area, 1e-8)
+
+        set_scaling_factor(ro_stage.deltaP, 1e4)
 
     return m
 
@@ -348,13 +386,29 @@ def initialize_units(m):
 
         print("Degrees of freedom after pump initialization:", degrees_of_freedom(m))
 
-        relax_bounds_for_low_salinity_waters(ro_stage)
+        # relax_bounds_for_low_salinity_waters(ro_stage)
+
+        # ro_stage.initialize()
 
         try:
             ro_stage.initialize()
         except:
+            # print(f"Initialization failed for RO stage {i}.")
             print_infeasible_constraints(ro_stage)
-            print("Degrees of freedom after RO initialization:", degrees_of_freedom(m))
+            # print(len(list_badly_scaled_variables(ro_stage)))
+            # print("Degrees of freedom after RO initialization:", degrees_of_freedom(m))
+
+            # Get badly scaled constraints (extreme row norms)
+            badly_scaled_constraints = extreme_jacobian_rows(
+                m,  # your model
+                scaled=True,  # use scaled Jacobian
+                large=1e4,    # constraints with row norm >= this are considered large
+                small=1e-4    # constraints with row norm <= this are considered small
+            )
+
+            # Print results
+            for norm, constraint in badly_scaled_constraints:
+                print(f"Constraint {constraint.name}: row norm = {norm}")
 
         # Propagate state from RO stage to permeate mixer
         # propagate_state(getattr(m.fs, f"ro_stage_{i}_to_permeate_mixer"))
@@ -366,6 +420,7 @@ def initialize_units(m):
     # m.fs.permeate.initialize()
     
     return m
+
 
 
 
@@ -381,6 +436,7 @@ if __name__ == "__main__":
     except:
         print_infeasible_constraints(m)
 
-    print("RO Stage 1 Feed Side Length:", m.fs.ro_stage_1.feed_side.length.value)
+    # print("RO Stage 1 Feed Side Length:", m.fs.ro_stage_1.feed_side.length.value)
     # print("RO Stage 2 Feed Side Length:", m.fs.ro_stage_2.feed_side.length.value)
     # print("RO Stage 3 Feed Side Length:", m.fs.ro_stage_3.feed_side.length.value)
+
