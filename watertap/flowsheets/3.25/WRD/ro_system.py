@@ -139,7 +139,7 @@ def add_units(m):
                     transformation_scheme="BACKWARD",
                     transformation_method="dae.finite_difference",
                     module_type="spiral_wound",
-                    finite_elements=2, 
+                    finite_elements=7, 
                     has_full_reporting=True,
             )
         )
@@ -432,6 +432,7 @@ def initialize_units(m):
     m.fs.permeate_mixer.initialize()
 
     propagate_state(m.fs.permeate_mixer_to_permeate)
+    m.fs.permeate.properties[0].flow_vol_phase
     m.fs.permeate.initialize()
     
     return m
@@ -465,6 +466,7 @@ if __name__ == "__main__":
 
     print("Permeate Stream \n", m.fs.permeate.properties[0].display())
 
- 
+    print("Permeate production from all trains:", m.fs.permeate.properties[0].flow_vol_phase["Liq"]() * get_config_value(m.fs.config_data,"number_of_trains", "reverse_osmosis_1d"))
+    
 
 
