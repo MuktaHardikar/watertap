@@ -246,7 +246,6 @@ class CCRO_dead_volume_flushing:
             units=pyunits.dimensionless,
             doc="Water recovery after single pass through RO or accumulation time",
         )
-
         
         return m
     
@@ -309,7 +308,6 @@ class CCRO_dead_volume_flushing:
         m.fs.dead_volume.dead_volume.properties_out.calculate_state(
             var_args={
                 ("flow_vol_phase","Liq"):self.recycle_flowrate,
-                # ("conc_mass_phase_comp", ("Liq", "NaCl")): self.recycle_conc_start,
                 ("flow_mass_phase_comp", ("Liq", "NaCl")): self.recycle_flow_mass_salt,
                 ("temperature", None): self.temperature_start
             },
@@ -377,7 +375,7 @@ class CCRO_dead_volume_flushing:
         """
         Initialize the model by fixing the values of certain variables.
         """
-
+        m.fs.raw_feed.properties[0].flow_vol_phase["Liq"]
         m.fs.raw_feed.initialize()
 
         propagate_state(m.fs.raw_feed_to_P1)
@@ -388,6 +386,7 @@ class CCRO_dead_volume_flushing:
         #     m.fs.raw_feed.properties[0].pressure_osm_phase["Liq"].value * 2 + 2e5
         # )
 
+        m.fs.dead_volume.dead_volume.properties_in[0].flow_vol_phase["Liq"]
         m.fs.dead_volume.initialize()
         # m.fs.dead_volume.dead_volume.properties_out[0].pressure.unfix()
 
@@ -402,6 +401,7 @@ class CCRO_dead_volume_flushing:
         propagate_state(m.fs.P1_to_M1)
         propagate_state(m.fs.P2_to_M1)
         
+        m.fs.M1.mixed_state[0].flow_vol_phase["Liq"]
         m.fs.M1.initialize()
         m.fs.M1.mixed_state[0].pressure.fix(m.fs.raw_feed.properties[0].pressure_osm_phase["Liq"].value * 2 + 2e5)
 
@@ -410,6 +410,7 @@ class CCRO_dead_volume_flushing:
 
         propagate_state(m.fs.RO_permeate_to_product)
 
+        m.fs.product.properties[0].flow_vol_phase["Liq"]
         m.fs.product.initialize()
 
         return m
@@ -503,13 +504,16 @@ class CCRO_dead_volume_flushing:
             m = self.m
         
         # Unfix feed flow rate
+        m.fs.raw_feed.properties[0].flow_vol_phase["Liq"].unfix()
         m.fs.raw_feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].unfix()
-        # m.fs.raw_feed.properties[0].flow_mass_phase_comp["Liq", "NaCl"].unfix()
+        m.fs.raw_feed.properties[0].conc_mass_phase_comp["Liq","NaCl"].fix()
+        m.fs.raw_feed.properties[0].flow_mass_phase_comp["Liq", "NaCl"].unfix()
 
         # Unfix P1 and P2 outlet pressures
         m.fs.P1.control_volume.properties_out[0].pressure.unfix()
         m.fs.P2.control_volume.properties_out[0].pressure.unfix()
         m.fs.M1.mixed_state[0].pressure.unfix()
+        m.fs.M1.mixed_state[0].flow_vol_phase.fix()
 
         m.fs.dead_volume.dead_volume.properties_out[0].flow_mass_phase_comp["Liq", "H2O"].unfix()
         m.fs.dead_volume.dead_volume.properties_out[0].flow_mass_phase_comp["Liq", "NaCl"].unfix()
@@ -521,6 +525,9 @@ class CCRO_dead_volume_flushing:
 
         m.fs.dead_volume.dead_volume.properties_out[0].temperature.unfix()
         m.fs.dead_volume.dead_volume.properties_out[0].pressure.unfix()
+
+        # m.fs.dead_volume.dead_volume.properties_in[0].flow_vol_phase["Liq"].fix(self.recycle_flowrate)
+        # m.fs.dead_volume.dead_volume.properties_out[0].flow_vol_phase["Liq"].fix(self.recycle_flowrate)
 
         m.fs.dead_volume.delta_state.dens_mass_phase[0, "Liq"].unfix()
         m.fs.dead_volume.delta_state.mass_frac_phase_comp[0, "Liq", "NaCl"].unfix()
@@ -588,11 +595,36 @@ class CCRO_dead_volume_flushing:
     # Multiperiod constraints:
     # 1. Concentration at the end of the flushing period should be equal to the concentration at the start of the filtration period
 
+def print_results_table(ccro_model):
+    """
+    Print multiperiod CCRO results in a tabular format in the terminal.
+    """
+    print("\n" + "="*120)
+    print("CCRO MULTIPERIOD RESULTS")
+    print("="*120)
+    
+    # Header
+    print(f"{'Time':<6} {'Raw Feed':<12} {'Permeate':<12} {'Mixer Out':<12} {'Dead Vol In':<12} {'Dead Vol Out':<12} {'Dead Vol Conc':<12}")
+    print(f"{'Period':<6} {'Flow (m³/s)':<12} {'Flow (m³/s)':<12} {'Flow (m³/s)':<12} {'Flow (m³/s)':<12} {'Flow (m³/s)':<12} {'Conc (kg/m³)':<12}")
+    print("-" * 120)
+    
+    # Data rows
+    for t, blks in enumerate(ccro_model.mp.get_active_process_blocks()):
+        raw_feed = blks.fs.raw_feed.properties[0].flow_vol_phase["Liq"].value
+        permeate = blks.fs.product.properties[0].flow_vol_phase["Liq"].value
+        mixer_out = blks.fs.M1.mixed_state[0].flow_vol_phase["Liq"].value
+        dead_vol_in = blks.fs.dead_volume.dead_volume.properties_in[0].flow_vol_phase["Liq"].value
+        dead_vol_out = blks.fs.dead_volume.dead_volume.properties_out[0].flow_vol_phase["Liq"].value
+        dead_vol_conc = blks.fs.dead_volume.dead_volume.properties_out[0].mass_frac_phase_comp["Liq", "NaCl"].value
+        
+        print(f"{t:<6} {raw_feed:<12.6f} {permeate:<12.6f} {mixer_out:<12.6f} {dead_vol_in:<12.6f} {dead_vol_out:<12.6f} {dead_vol_conc:<12.6f}")
+    
+    print("="*120)
 
 if __name__ == "__main__":
 
     initial_conditions = {
-        "n_time_points": 5,
+        "n_time_points": 10,
         "raw_feed_conc": 5.8,
         "raw_feed_flowrate": 1.8,
         "recycle_flowrate": 49.911,
@@ -613,20 +645,8 @@ if __name__ == "__main__":
     ccro = CCRO_dead_volume_flushing(**initial_conditions)
 
     ccro.create_multiperiod()
-    try:
-        ccro.solve(tee=False)
-        print('Raw feed flowrate:', blks.fs.raw_feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].value)
-        print('Mixer outlet concentration:', blks.fs.M1.mixed_state[0].conc_mass_phase_comp["Liq", "NaCl"].value)
-        print('Dead volume mass phase comp:', blks.fs.dead_volume.dead_volume.mass_phase_comp[0,"Liq", "NaCl"].value)
-    
-
-        
-    except:
-        # Print flowrate to RO model
-        for blks in ccro.mp.get_active_process_blocks():
-            print('Raw feed flowrate:', blks.fs.raw_feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].value)
-            print('Mixer outlet concentration:', blks.fs.M1.mixed_state[0].conc_mass_phase_comp["Liq", "NaCl"].value)
-            print('Dead volume mass phase comp:', blks.fs.dead_volume.dead_volume.mass_phase_comp[0,"Liq", "NaCl"].value)
+    ccro.solve(tee=False)
+    print_results_table(ccro)
     
 
     # m = ccro.build_system()
