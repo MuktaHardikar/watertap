@@ -538,27 +538,27 @@ class CCRO_dead_volume_flushing:
         # Get all filtration time blocks (all except the last one which is flushing)
         blks = list(mp.get_active_process_blocks())
 
-        # # Create constraint set on the multiperiod model
-        # mp.equal_product_constraints = Constraint(
-        #     range(1, len(blks)-1),
-        #     doc="Constraint to ensure equal single pass water recovery across filtration periods"
-        # )
-
-        # # Add constraints: recovery[t] = recovery[0] for all filtration periods
-        # for t in range(1, len(blks)-1):
-        #     mp.equal_product_constraints[t]= (blks[t].fs.product.properties[0].flow_vol_phase["Liq"] ==
-        #             blks[t-1].fs.product.properties[0].flow_vol_phase["Liq"]
-        #     )
-
-        mp.equal_feed_constraints = Constraint(
+        # Create constraint set on the multiperiod model
+        mp.equal_product_constraints = Constraint(
             range(1, len(blks)-1),
             doc="Constraint to ensure equal single pass water recovery across filtration periods"
         )
 
+        # Add constraints: recovery[t] = recovery[0] for all filtration periods
         for t in range(1, len(blks)-1):
-            mp.equal_feed_constraints[t]= (blks[t].fs.raw_feed.properties[0].flow_vol_phase["Liq"] ==
-                    blks[t-1].fs.raw_feed.properties[0].flow_vol_phase["Liq"]
+            mp.equal_product_constraints[t]= (blks[t].fs.product.properties[0].flow_vol_phase["Liq"] ==
+                    blks[t-1].fs.product.properties[0].flow_vol_phase["Liq"]
             )
+
+        # mp.equal_feed_constraints = Constraint(
+        #     range(1, len(blks)-1),
+        #     doc="Constraint to ensure equal single pass water recovery across filtration periods"
+        # )
+
+        # for t in range(1, len(blks)-1):
+        #     mp.equal_feed_constraints[t]= (blks[t].fs.raw_feed.properties[0].flow_vol_phase["Liq"] ==
+        #             blks[t-1].fs.raw_feed.properties[0].flow_vol_phase["Liq"]
+        #     )
         
         mp.mixed_state_constraints = Constraint(
             range(1, len(blks)-1),
@@ -792,6 +792,6 @@ if __name__ == "__main__":
     print("Feed flow:",ccro.raw_feed_flowrate())
     print("Recycle flow:",ccro.recycle_flowrate())
     print("Flushing efficiency:",ccro.mp.get_active_process_blocks()[-1].fs.flushing_efficiency.value)
-   
-    
+
+    print("Flushing time:",ccro.mp.get_active_process_blocks()[-1].fs.flushing_time.value)
 
