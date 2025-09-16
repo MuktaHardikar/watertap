@@ -1,5 +1,3 @@
-from xml.parsers.expat import model
-import matplotlib.pyplot as plt
 from pyomo.environ import (
     ConcreteModel,
     Param,
@@ -48,9 +46,11 @@ import os
 
 solver = get_solver()
 
+
 def load_config(config):
     with open(config, "r") as file:
         return yaml.safe_load(file)
+
 
 def get_config_value(config, key, section, subsection=None,):
     """
@@ -94,10 +94,10 @@ def build_wrd_ro_system():
 
     # WRD RO configurations input file. References to all values included in yml file
     cwd = os.path.dirname(os.path.abspath(__file__))
-    config = cwd + "/wrd_inputs.yaml"
+    config = cwd + "/meta_data/wrd_ro_inputs.yaml"
     m.fs.config_data = load_config(config)
 
-    m = add_units(m)
+    m = add_ro_units(m)
     print("Degrees of freedom after adding units:", degrees_of_freedom(m))
 
     m = build_inlet_stream(m)
@@ -114,7 +114,8 @@ def build_wrd_ro_system():
 
     return m
 
-def add_units(m):
+
+def add_ro_units(m):
 
     # Feed pump to first stage RO
     m.fs.pump1 = Pump(property_package=m.fs.properties)
@@ -154,6 +155,7 @@ def add_units(m):
     
     return m
 
+
 def build_inlet_stream(m):
     '''Build the inlet stream for the RO system'''
 
@@ -176,6 +178,7 @@ def build_inlet_stream(m):
     m.fs.feed.properties[0].pressure.fix(feed_pressure)
 
     return m
+
 
 def set_operation_conditions(m):
     '''
@@ -371,6 +374,7 @@ def add_scaling(m):
         set_scaling_factor(ro_stage.deltaP, 1e4)
 
     return m
+
 
 def initialize_units(m):
     '''
