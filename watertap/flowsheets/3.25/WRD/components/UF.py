@@ -11,7 +11,6 @@ from pyomo.environ import (
     Expression,
     TransformationFactory,
     Objective,
-    NonNegativeReals,
     Block,
     RangeSet,
     check_optimal_termination,
@@ -21,7 +20,7 @@ from pyomo.network import Arc, SequentialDecomposition
 from pyomo.util.check_units import assert_units_consistent
 from idaes.core import FlowsheetBlock, UnitModelCostingBlock, MaterialFlowBasis
 from idaes.core.solvers import get_solver
-from idaes.core.util.initialization import propagate_state as _prop_state
+from idaes.core.util.initialization import propagate_state 
 import idaes.core.util.scaling as iscale
 from idaes.core.util.scaling import (
     constraint_scaling_transform,
@@ -38,25 +37,13 @@ from watertap.property_models.NaCl_prop_pack import NaClParameterBlock
 from watertap.property_models.multicomp_aq_sol_prop_pack import MCASParameterBlock
 from watertap.core.zero_order_properties import WaterParameterBlock
 from watertap.unit_models.zero_order.ultra_filtration_zo import UltraFiltrationZO
-from watertap_contrib.reflo.costing import (
-    TreatmentCosting,
-    EnergyCosting,
-    REFLOCosting,
-)
 from watertap.costing.zero_order_costing import ZeroOrderCosting
-from watertap_contrib.reflo.core import REFLODatabase
+
+from watertap.core import Database
 
 
 #TODO:
 #1. Unfix the variable energy_electric_flow_vol_inlet
-
-def propagate_state(arc):
-    _prop_state(arc)
-    # print(f"Propogation of {arc.source.name} to {arc.destination.name} successful.")
-    # arc.source.display()
-    # print(arc.destination.name)
-    # arc.destination.display()
-    # print('\n')
 
 
 def build_UF(m, blk, prop_package) -> None:
@@ -150,9 +137,8 @@ def load_parameters(m, blk):
 def build_system():
     m = ConcreteModel()
     m.fs = FlowsheetBlock(dynamic=False)
-    m.fs.costing = REFLOCosting()
-    # m.fs.costing = ZeroOrderCosting()
-    m.db = REFLODatabase()
+    m.fs.costing = ZeroOrderCosting()
+    m.db = Database(dbpath='watertap/flowsheets/3.25/WRD/meta_data')
     m.fs.RO_properties = NaClParameterBlock()
     m.fs.MCAS_properties = MCASParameterBlock(
         solute_list=[
@@ -263,54 +249,19 @@ def print_UF_costing_breakdown(blk, debug=False):
         print(blk.unit.costing.display())
 
 
-def breakdown_dof(blk):
-    equalities = [c for c in activated_equalities_generator(blk)]
-    active_vars = variables_in_activated_equalities_set(blk)
-    fixed_active_vars = fixed_variables_in_activated_equalities_set(blk)
-    unfixed_active_vars = unfixed_variables_in_activated_equalities_set(blk)
-    print("\n ===============DOF Breakdown================\n")
-    print(f"Degrees of Freedom: {degrees_of_freedom(blk)}")
-    print(f"Activated Variables: ({len(active_vars)})")
-    for v in active_vars:
-        print(f"   {v}")
-    print(f"Activated Equalities: ({len(equalities)})")
-    for c in equalities:
-        print(f"   {c}")
-
-    print(f"Fixed Active Vars: ({len(fixed_active_vars)})")
-    for v in fixed_active_vars:
-        print(f"   {v}")
-
-    print(f"Unfixed Active Vars: ({len(unfixed_active_vars)})")
-    for v in unfixed_active_vars:
-        print(f"   {v}")
-    print("\n")
-    print(f" {f' Active Vars':<30s}{len(active_vars)}")
-    print(f"{'-'}{f' Fixed Active Vars':<30s}{len(fixed_active_vars)}")
-    print(f"{'-'}{f' Activated Equalities':<30s}{len(equalities)}")
-    print(f"{'='}{f' Degrees of Freedom':<30s}{degrees_of_freedom(blk)}")
-    print("\nSuggested Variables to Fix:")
-
-    if degrees_of_freedom != 0:
-        unfixed_vars_without_constraint = [
-            v for v in active_vars if v not in unfixed_active_vars
-        ]
-        for v in unfixed_vars_without_constraint:
-            if v.fixed is False:
-                print(f"   {v}")
 
 
 if __name__ == "__main__":
     file_dir = os.path.dirname(os.path.abspath(__file__))
     m = build_system()
-    # set_UF_op_conditions(m.fs.UF)
-    # set_system_conditions(m.fs.UF)
-    # # load_parameters(m, m.fs.UF)
+    set_UF_op_conditions(m.fs.UF)
+    set_system_conditions(m.fs.UF)
+    # load_parameters(m, m.fs.UF)
     # add_UF_costing(m, m.fs.UF)
     # m.fs.costing.cost_process()
     # # m.fs.costing.initialize()
-    # init_UF(m, m.fs.UF)
-    # solve(m)
+    init_UF(m, m.fs.UF)
+    solve(m)
 
     # report_UF(m, m.fs.UF)
     # m.fs.UF.unit.costing.display()
