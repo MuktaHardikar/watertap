@@ -485,8 +485,10 @@ if __name__ == "__main__":
 
     results = solver.solve(m, tee=True)
 
-    m.fs.ro_train.total_ro_feed.display()
-    m.fs.ro_train.feed.display()  
+    # m.fs.ro_train.total_ro_feed.display()
+    # m.fs.ro_train.feed.display()
+
+    print(f"{iscale.jacobian_cond(m.fs.ro_train):.2e}")
 
     assert False
          
