@@ -22,6 +22,7 @@ from watertap.core.zero_order_properties import WaterParameterBlock
 
 from watertap.flowsheets.flex_desal.wrd.components.UF import *
 from watertap.flowsheets.flex_desal.wrd.components.chemical_addition import *
+# from watertap.flowsheets.flex_desal.wrd.components.ro_system import *
 from watertap.flowsheets.flex_desal.wrd.components.ro_system import *
 from watertap.flowsheets.flex_desal.wrd.components.translator_ZO_to_NaCl import TranslatorZOtoNaCl
 
@@ -84,7 +85,7 @@ def add_connections(m):
     # Connect UF to RO translator
     m.fs.s04 = Arc(source=m.fs.UF.product.outlet, destination=m.fs.translator_ZO_to_RO.inlet)
     # Connect RO translator to RO
-    m.fs.s05 = Arc(source=m.fs.translator_ZO_to_RO.outlet, destination=m.fs.ro_train.total_ro_feed.inlet)
+    m.fs.s05 = Arc(source=m.fs.translator_ZO_to_RO.outlet, destination=m.fs.ro_train.feed.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -103,7 +104,8 @@ def set_wrd_operating_conditions(m):
     set_chem_addition_op_conditions(blk=m.fs.ammonia_addition)
     set_chem_addition_op_conditions(blk=m.fs.hypochlorite_addition)
     set_UF_op_conditions(m.fs.UF)
-    set_ro_operation_conditions(m.fs.ro_train)
+    # set_ro_operation_conditions(m.fs.ro_train)
+    set_ro_system_op_conditions(m.fs.ro_train)
 
 
 def initialize_wrd_system(m):
@@ -118,9 +120,10 @@ def initialize_wrd_system(m):
     propagate_state(m.fs.s04)
     m.fs.translator_ZO_to_RO.initialize()
     propagate_state(m.fs.s05)
-    m.fs.ro_train.total_ro_feed.initialize()
-    build_ro_inlet_stream(m.fs.ro_train, test=False)
-    initialize_ro_units(m.fs.ro_train)
+    initialize_ro_system(m.fs.ro_train)
+    # m.fs.ro_train.total_ro_feed.initialize()
+    # build_ro_inlet_stream(m.fs.ro_train, test=False)
+    # initialize_ro_units(m.fs.ro_train)
 
 def set_wrd_system_scaling(m):
 
@@ -162,7 +165,7 @@ if __name__ == "__main__":
     set_wrd_system_scaling(m)
     initialize_wrd_system(m)
 
-    m.fs.ro_train.total_ro_feed.display()
+    # m.fs.ro_train.total_ro_feed.display()
     m.fs.ro_train.feed.display()  
 
     # assert False  
