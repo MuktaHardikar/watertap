@@ -15,7 +15,7 @@ default:
       value: 1.0
       units: dimensionless
   recovery_frac_mass_H2O:
-    value: 0.95
+    value: 0.8
     units: dimensionless
     reference: Texas Water Development Board IT3PR User Manual
   default_removal_frac_mass_comp:
@@ -38,3 +38,7 @@ default:
       value: 0.9999
       units: dimensionless
       constituent_longform: Cryptosporidium
+    tds:
+      value: 0.001
+      units: dimensionless
+      constituent_longform: Total Dissolved Solids (TDS)
