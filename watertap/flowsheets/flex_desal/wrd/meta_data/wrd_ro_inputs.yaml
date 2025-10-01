@@ -22,17 +22,17 @@ feed_stream:
 # Pump pressure for Train 2 data on 2/20/21. Pump efficiencies to be updated    
 pumps:
   pump_1:
-    pump_efficiency: 0.8  # unitless
+    pump_efficiency: 0.7  # unitless
     pump_outlet_pressure: 
       value: 153.5
       units: psi 
   pump_2:
-    pump_efficiency: 0.8  # unitless
+    pump_efficiency: 0.7  # unitless
     pump_outlet_pressure: 
       value: 157.8
       units: psi  
   pump_3:
-    pump_efficiency: 0.8  # unitless
+    pump_efficiency: 0.7  # unitless
     pump_outlet_pressure: 
       value: 156.8
       units: psi
