@@ -2,6 +2,7 @@ from pyomo.environ import (
     ConcreteModel,
     Param,
     Objective,
+    Expression,
     check_optimal_termination,
     value,
     assert_optimal_termination,
@@ -211,6 +212,8 @@ def build_wrd_ro_system(blk, prop_package=None, number_trains=3, number_stages=3
 
     config = parent_directory + "/meta_data/wrd_ro_inputs.yaml"
     blk.config_data = load_config(config)
+    
+    total_power_consumption = 0
 
     for i, n in enumerate(range(number_trains)):
         blk.add_component(f"train_{n+1}", FlowsheetBlock(dynamic=False))
@@ -225,6 +228,7 @@ def build_wrd_ro_system(blk, prop_package=None, number_trains=3, number_stages=3
         splitter_outlet = blk.feed_splitter.find_component(f"train_{i+1}_feed")
 
         add_ro_units(train, prop_package=prop_package)
+        total_power_consumption += train.train_power_consumption
         add_ro_connections(train)
 
         train.add_component(
@@ -252,6 +256,8 @@ def build_wrd_ro_system(blk, prop_package=None, number_trains=3, number_stages=3
         source=blk.brine_mixer.outlet, destination=blk.brine.inlet
     )
 
+    blk.total_power_consumption = Expression(expr=total_power_consumption)
+
     TransformationFactory("network.expand_arcs").apply_to(blk)
     print("Degrees of freedom after adding units:", degrees_of_freedom(blk))
 
@@ -266,11 +272,15 @@ def add_ro_units(blk, prop_package=None):
         prop_package = m.fs.ro_properties
 
     blk.feed = StateJunction(property_package=prop_package)
+    blk.train_power_consumption = 0
 
     for i in range(1, (blk.number_stages + 1)):
         blk.add_component(
             f"pump{i}",
             Pump(property_package=prop_package),
+        )
+        blk.train_power_consumption += pyunits.convert(
+            blk.find_component(f"pump{i}").work_mechanical[0], to_units=pyunits.kW
         )
         blk.add_component(
             f"ro_stage_{i}",
@@ -298,6 +308,7 @@ def add_ro_units(blk, prop_package=None):
         energy_mixing_type=MixingType.extensive,
         momentum_mixing_type=MomentumMixingType.minimize,
     )
+    blk.power_consumption = Expression(expr=blk.train_power_consumption)
 
     blk.permeate = StateJunction(property_package=prop_package)
     blk.brine = StateJunction(property_package=prop_package)
@@ -568,4 +579,35 @@ if __name__ == "__main__":
 
     print(f"{iscale.jacobian_cond(m.fs.ro_system):.2e}")
     m.fs.ro_system.recovery.display()
-    # m.fs.ro_system.display()
+    m.fs.ro_system.total_power_consumption.display()
+
+    for t in range(1, m.fs.ro_system.number_trains + 1):
+        train = m.fs.ro_system.find_component(f"train_{t}")
+        # print(f"\n--- Train {t} ---")
+        # train.feed.display()
+        # train.permeate.display()
+        # train.brine.display()
+        for s in range(1, (train.number_stages + 1)):
+    #         if s == train.number_stages:
+            pump = train.find_component(f"pump{s}")
+            print(f"\n--- Train {t}, Stage {s} ---")
+            print(f"Pump {s}- Power: {value(pump.work_mechanical[0] * 1e-3)} kW")
+    #             p = pump.control_volume.properties_out[0].pressure.value
+    #             pump.control_volume.properties_out[0].pressure.unfix()
+    #             pump.control_volume.properties_out[0].pressure.set_value(p * 0.5/0.93)
+
+    #         # stage = train.find_component(f"ro_stage_{s}")
+    #         # print(f"\n Stage {s}")
+    #         # stage.display()
+    # # m.fs.del_component(m.fs.obj
+    # m.fs.obj.deactivate()
+    # m.fs.obj2 = Objective(
+    #     expr=m.fs.ro_system.recovery
+    # )
+    # print(f"dof = {degrees_of_freedom(m.fs.ro_system)}")
+    # m.fs.ro_system.recovery.fix(0.8)
+    # print(f"dof = {degrees_of_freedom(m.fs.ro_system)}")
+    # results = solver.solve(m)
+    # assert_optimal_termination(results)
+
+    # # m.fs.ro_system.display()
