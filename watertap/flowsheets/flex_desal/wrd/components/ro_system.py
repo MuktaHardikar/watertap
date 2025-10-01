@@ -152,7 +152,7 @@ def build_system(**kwargs):
     return m
 
 
-def build_wrd_ro_system(blk, prop_package=None, number_trains=3, number_stages=3):
+def build_wrd_ro_system(blk, prop_package=None, number_trains=4, number_stages=3):
     """
     Build reverse osmosis system for WRD
     """
@@ -212,7 +212,7 @@ def build_wrd_ro_system(blk, prop_package=None, number_trains=3, number_stages=3
 
     config = parent_directory + "/meta_data/wrd_ro_inputs.yaml"
     blk.config_data = load_config(config)
-    
+
     total_power_consumption = 0
 
     for i, n in enumerate(range(number_trains)):
@@ -565,8 +565,38 @@ def initialize_ro_system(blk):
     blk.brine.initialize()
 
 
+def report_pump(blk, w=30):
+    title = "Pump Report"
+    side = int(((3 * w) - len(title)) / 2) - 1
+    header = "=" * side + f" {title} " + "=" * side
+    print(f"\n{header}\n")
+    print(f'{"Parameter":<{w}s}{"Value":<{w}s}{"Units":<{w}s}')
+    print(f"{'-' * (3 * w)}")
+
+    for t in range(1, blk.number_trains + 1):
+        train = blk.find_component(f"train_{t}")
+        for s in range(1, (train.number_stages + 1)):
+            pump = train.find_component(f"pump{s}")
+            title = f"Train {t}, Stage {s}"
+            side = int(((3 * w) - len(title)) / 2) - 1
+            header = "." * side + f" {title} " + "." * side
+            print(f"\n{header}\n")
+            print(
+                f'{f"Stage {s} Pump Pressure In":<{w}s}{value(pyunits.convert(pump.control_volume.properties_in[0].pressure, to_units=pyunits.psi)):<{w}.1f}{"psi"}'
+            )
+            print(
+                f'{f"Stage {s} Pump Pressure Out":<{w}s}{value(pyunits.convert(pump.control_volume.properties_out[0].pressure, to_units=pyunits.psi)):<{w}.1f}{"psi"}'
+            )
+            print(
+                f'{f"Stage {s} Pump ∆P":<{w}s}{value(pyunits.convert(pump.control_volume.deltaP[0], to_units=pyunits.psi)):<{w}.1f}{"psi"}'
+            )
+            print(
+                f'{f"Stage {s} Pump Work":<{w}s}{value(pyunits.convert(pump.control_volume.work[0], to_units=pyunits.kW)):<{w}.3f}{"kW"}'
+            )
+
+
 if __name__ == "__main__":
-    m = build_system(number_trains=3, number_stages=3)
+    m = build_system(number_trains=4, number_stages=3)
     set_inlet_conditions(m.fs.ro_system, Qin=0.154, Cin=0.542)
     set_ro_system_op_conditions(m.fs.ro_system)
     add_ro_scaling(m.fs.ro_system)
@@ -578,20 +608,23 @@ if __name__ == "__main__":
     assert_optimal_termination(results)
 
     print(f"{iscale.jacobian_cond(m.fs.ro_system):.2e}")
-    m.fs.ro_system.recovery.display()
-    m.fs.ro_system.total_power_consumption.display()
+    # m.fs.ro_system.recovery.display()
+    # m.fs.ro_system.total_power_consumption.display()
+    report_pump(m.fs.ro_system, w=40)
 
-    for t in range(1, m.fs.ro_system.number_trains + 1):
-        train = m.fs.ro_system.find_component(f"train_{t}")
-        # print(f"\n--- Train {t} ---")
-        # train.feed.display()
-        # train.permeate.display()
-        # train.brine.display()
-        for s in range(1, (train.number_stages + 1)):
-    #         if s == train.number_stages:
-            pump = train.find_component(f"pump{s}")
-            print(f"\n--- Train {t}, Stage {s} ---")
-            print(f"Pump {s}- Power: {value(pump.work_mechanical[0] * 1e-3)} kW")
+    # for t in range(1, m.fs.ro_system.number_trains + 1):
+    #     train = m.fs.ro_system.find_component(f"train_{t}")
+    #     # print(f"\n--- Train {t} ---")
+    #     # train.feed.display()
+    #     # train.permeate.display()
+    #     # train.brine.display()
+    #     for s in range(1, (train.number_stages + 1)):
+    # #         if s == train.number_stages:
+    #         pump = train.find_component(f"pump{s}")
+    #         print(f"\n--- Train {t}, Stage {s} ---")
+    #         print(f"Pump {s}- Pressure In: {value(pyunits.convert(pump.control_volume.properties_in[0].pressure, to_units=pyunits.psi))} psi")
+    #         print(f"Pump {s}- Pressure Out: {value(pyunits.convert(pump.control_volume.properties_out[0].pressure , to_units=pyunits.psi))} psi")
+    #         print(f"Pump {s}- Power: {value(pump.work_mechanical[0] * 1e-3)} kW")
     #             p = pump.control_volume.properties_out[0].pressure.value
     #             pump.control_volume.properties_out[0].pressure.unfix()
     #             pump.control_volume.properties_out[0].pressure.set_value(p * 0.5/0.93)
