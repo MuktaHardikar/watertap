@@ -318,7 +318,7 @@ def set_inlet_conditions(blk, Qin=0.154, Cin=0.542):
     """
     Set the operation conditions for the RO system
     """
-    Qin = Qin * pyunits.m**3 / pyunits.s  # Feed flow rate in m3/s
+    Qin = (blk.number_trains * Qin) * pyunits.m**3 / pyunits.s  # Feed flow rate in m3/s
     Cin = Cin * pyunits.g / pyunits.L  # Feed concentration in g/L
     rho = 1000 * pyunits.kg / pyunits.m**3  # Approximate density of water
     feed_mass_flow_water = Qin * rho
@@ -573,6 +573,8 @@ def report_pump(blk, w=30):
     print(f'{"Parameter":<{w}s}{"Value":<{w}s}{"Units":<{w}s}')
     print(f"{'-' * (3 * w)}")
 
+    total_flow = 0
+    total_power = 0
     for t in range(1, blk.number_trains + 1):
         train = blk.find_component(f"train_{t}")
         for s in range(1, (train.number_stages + 1)):
@@ -580,7 +582,19 @@ def report_pump(blk, w=30):
             title = f"Train {t}, Stage {s}"
             side = int(((3 * w) - len(title)) / 2) - 1
             header = "." * side + f" {title} " + "." * side
+            if s == 1:
+                total_flow += pump.control_volume.properties_out[0].flow_vol
+            total_power += pyunits.convert(pump.work_mechanical[0], to_units=pyunits.kW)
             print(f"\n{header}\n")
+            print(
+                f'{f"Stage {s} Flow In (MGD)":<{w}s}{value(pyunits.convert(pump.control_volume.properties_out[0].flow_vol, to_units=pyunits.Mgallons / pyunits.day)):<{w}.3f}{"MGD"}'
+            )
+            print(
+                f'{f"Stage {s} Flow In (m3/s)":<{w}s}{value(pump.control_volume.properties_out[0].flow_vol):<{w}.3e}{"m3/s"}'
+            )
+            print(
+                f'{f"Stage {s} Flow In (gpm)":<{w}s}{value(pyunits.convert(pump.control_volume.properties_out[0].flow_vol, to_units=pyunits.gallons / pyunits.minute)):<{w}.3f}{"gpm"}'
+            )
             print(
                 f'{f"Stage {s} Pump Pressure In":<{w}s}{value(pyunits.convert(pump.control_volume.properties_in[0].pressure, to_units=pyunits.psi)):<{w}.1f}{"psi"}'
             )
@@ -588,11 +602,30 @@ def report_pump(blk, w=30):
                 f'{f"Stage {s} Pump Pressure Out":<{w}s}{value(pyunits.convert(pump.control_volume.properties_out[0].pressure, to_units=pyunits.psi)):<{w}.1f}{"psi"}'
             )
             print(
-                f'{f"Stage {s} Pump ∆P":<{w}s}{value(pyunits.convert(pump.control_volume.deltaP[0], to_units=pyunits.psi)):<{w}.1f}{"psi"}'
+                f'{f"Stage {s} Pump ∆P (psi)":<{w}s}{value(pyunits.convert(pump.control_volume.deltaP[0], to_units=pyunits.psi)):<{w}.1f}{"psi"}'
             )
             print(
-                f'{f"Stage {s} Pump Work":<{w}s}{value(pyunits.convert(pump.control_volume.work[0], to_units=pyunits.kW)):<{w}.3f}{"kW"}'
+                f'{f"Stage {s} Pump ∆P (Pa)":<{w}s}{value(pump.control_volume.deltaP[0]):<{w}.1f}{"Pa"}'
             )
+            print(
+                f'{f"Stage {s} Pump Work Fluid":<{w}s}{value(pyunits.convert(pump.work_fluid[0], to_units=pyunits.kW)):<{w}.3f}{"kW"}'
+            )
+            print(
+                f'{f"Stage {s} Pump Work Mech.":<{w}s}{value(pyunits.convert(pump.work_mechanical[0], to_units=pyunits.kW)):<{w}.3f}{"kW"}'
+            )
+
+    print(f"{'.' * (3 * w)}")
+    print(f"{'.' * (3 * w)}")
+    print(
+        f'{f"Total Flow Rate (MGD)":<{w}s}{value(pyunits.convert(total_flow, to_units=pyunits.Mgallons /pyunits.day)):<{w}.3f}{"MGD"}'
+    )
+    print(f'{f"Total Flow Rate (m3/s)":<{w}s}{value(total_flow):<{w}.3e}{"m3/s"}')
+    print(
+        f'{f"Total Flow Rate (gpm)":<{w}s}{value(pyunits.convert(total_flow, to_units=pyunits.gallons / pyunits.minute)):<{w}.3f}{"gpm"}'
+    )
+    print(
+        f'{f"Total Power Consumption":<{w}s}{value(pyunits.convert(total_power, to_units=pyunits.kW)):<{w}.3f}{"kW"}'
+    )
 
 
 if __name__ == "__main__":
