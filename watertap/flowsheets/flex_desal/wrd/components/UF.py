@@ -94,7 +94,7 @@ def build_UF(blk, prop_package) -> None:
     )
 
 
-def set_system_conditions(blk):
+def set_inlet_conditions(blk):
     blk.feed.properties[0.0].flow_mass_comp["H2O"].fix(171.37)
     blk.feed.properties[0.0].flow_mass_comp["tds"].fix(600)
     blk.feed.properties[0.0].flow_mass_comp["tss"].fix(5.22e-6)
@@ -189,7 +189,7 @@ def print_UF_costing_breakdown(blk, debug=False):
 if __name__ == "__main__":
     file_dir = os.path.dirname(os.path.abspath(__file__))
     m = build_system()
-    set_system_conditions(m.fs.UF)
+    set_inlet_conditions(m.fs.UF)
     set_UF_op_conditions(m.fs.UF)
     add_UF_scaling(m.fs.UF)
 

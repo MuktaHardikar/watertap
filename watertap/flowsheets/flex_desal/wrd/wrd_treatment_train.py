@@ -36,11 +36,6 @@ from watertap.flowsheets.flex_desal.wrd.components.translator_ZO_to_NaCl import 
     TranslatorZOtoNaCl,
 )
 
-# TODO:
-# Update RO inlet conditions based on translator output
-# Add UF sludge?
-# RO is not optimal solution
-
 
 def build_wrd_system():
     m = ConcreteModel()
