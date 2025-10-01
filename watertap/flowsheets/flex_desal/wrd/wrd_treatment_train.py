@@ -15,45 +15,56 @@ from pyomo.contrib.parmest.experiment import Experiment
 from idaes.core.util.initialization import propagate_state
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core import FlowsheetBlock
-from idaes.models.unit_models import MixingType, MomentumMixingType, Mixer, Separator, Product, Feed
+from idaes.models.unit_models import (
+    MixingType,
+    MomentumMixingType,
+    Mixer,
+    Separator,
+    Product,
+    Feed,
+)
 
 from watertap.property_models.NaCl_T_dep_prop_pack import NaClParameterBlock
 from watertap.core.zero_order_properties import WaterParameterBlock
 
 from watertap.flowsheets.flex_desal.wrd.components.UF import *
 from watertap.flowsheets.flex_desal.wrd.components.chemical_addition import *
+
 # from watertap.flowsheets.flex_desal.wrd.components.ro_system import *
 from watertap.flowsheets.flex_desal.wrd.components.ro_system import *
-from watertap.flowsheets.flex_desal.wrd.components.translator_ZO_to_NaCl import TranslatorZOtoNaCl
+from watertap.flowsheets.flex_desal.wrd.components.translator_ZO_to_NaCl import (
+    TranslatorZOtoNaCl,
+)
 
 # TODO:
 # Update RO inlet conditions based on translator output
 # Add UF sludge?
 # RO is not optimal solution
 
+
 def build_wrd_system():
     m = ConcreteModel()
     m.fs = FlowsheetBlock(dynamic=False)
 
-    m.db = Database(dbpath='watertap/flowsheets/flex_desal/wrd/meta_data')
+    m.db = Database(dbpath="watertap/flowsheets/flex_desal/wrd/meta_data")
 
-    m.fs.properties = WaterParameterBlock(
-            solute_list=["tds","tss"]
-        )
-    
+    m.fs.properties = WaterParameterBlock(solute_list=["tds", "tss"])
+
     # RO properties
     m.fs.ro_properties = NaClParameterBlock()
 
     # Add units
     m.fs.feed = Feed(property_package=m.fs.properties)
-    m.fs.product= Product(property_package=m.fs.properties)
+    m.fs.product = Product(property_package=m.fs.properties)
 
     # Chemical addition units
     m.fs.ammonia_addition = FlowsheetBlock(dynamic=False)
     build_chem_addition(m.fs.ammonia_addition, "ammonia", m.fs.properties)
 
     m.fs.hypochlorite_addition = FlowsheetBlock(dynamic=False)
-    build_chem_addition(m.fs.hypochlorite_addition, "sodium_hypochlorite", m.fs.properties)
+    build_chem_addition(
+        m.fs.hypochlorite_addition, "sodium_hypochlorite", m.fs.properties
+    )
 
     # UF unit
     m.fs.UF = FlowsheetBlock(dynamic=False)
@@ -75,17 +86,29 @@ def build_wrd_system():
 
     return m
 
+
 def add_connections(m):
     # Connect feed to ammonia addition
-    m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.ammonia_addition.feed.inlet)
+    m.fs.s01 = Arc(
+        source=m.fs.feed.outlet, destination=m.fs.ammonia_addition.feed.inlet
+    )
     # Connect ammonia addition to hypochlorite addition
-    m.fs.s02 = Arc(source=m.fs.ammonia_addition.product.outlet, destination=m.fs.hypochlorite_addition.feed.inlet)
+    m.fs.s02 = Arc(
+        source=m.fs.ammonia_addition.product.outlet,
+        destination=m.fs.hypochlorite_addition.feed.inlet,
+    )
     # Connect hypochlorite addition to UF
-    m.fs.s03 = Arc(source=m.fs.hypochlorite_addition.product.outlet, destination=m.fs.UF.feed.inlet)
+    m.fs.s03 = Arc(
+        source=m.fs.hypochlorite_addition.product.outlet, destination=m.fs.UF.feed.inlet
+    )
     # Connect UF to RO translator
-    m.fs.s04 = Arc(source=m.fs.UF.product.outlet, destination=m.fs.translator_ZO_to_RO.inlet)
+    m.fs.s04 = Arc(
+        source=m.fs.UF.product.outlet, destination=m.fs.translator_ZO_to_RO.inlet
+    )
     # Connect RO translator to RO
-    m.fs.s05 = Arc(source=m.fs.translator_ZO_to_RO.outlet, destination=m.fs.ro_train.feed.inlet)
+    m.fs.s05 = Arc(
+        source=m.fs.translator_ZO_to_RO.outlet, destination=m.fs.ro_train.feed.inlet
+    )
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -125,9 +148,10 @@ def initialize_wrd_system(m):
     # build_ro_inlet_stream(m.fs.ro_train, test=False)
     # initialize_ro_units(m.fs.ro_train)
 
+
 def set_wrd_system_scaling(m):
 
-    set_chem_addition_scaling(blk=m.fs.ammonia_addition )
+    set_chem_addition_scaling(blk=m.fs.ammonia_addition)
     set_chem_addition_scaling(blk=m.fs.hypochlorite_addition)
     add_UF_scaling(m.fs.UF)
     add_ro_scaling(m.fs.ro_train)
@@ -166,9 +190,9 @@ if __name__ == "__main__":
     initialize_wrd_system(m)
 
     # m.fs.ro_train.total_ro_feed.display()
-    m.fs.ro_train.feed.display()  
+    m.fs.ro_train.feed.display()
 
-    # assert False  
+    # assert False
 
     try:
         results = solve(m)
