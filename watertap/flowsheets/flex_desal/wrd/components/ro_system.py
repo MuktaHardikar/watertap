@@ -318,7 +318,7 @@ def set_inlet_conditions(blk, Qin=0.154, Cin=0.542):
     """
     Set the operation conditions for the RO system
     """
-    Qin = (blk.number_trains * Qin) * pyunits.m**3 / pyunits.s  # Feed flow rate in m3/s
+    Qin = (Qin) * pyunits.m**3 / pyunits.s  # Feed flow rate in m3/s
     Cin = Cin * pyunits.g / pyunits.L  # Feed concentration in g/L
     rho = 1000 * pyunits.kg / pyunits.m**3  # Approximate density of water
     feed_mass_flow_water = Qin * rho
@@ -630,7 +630,7 @@ def report_pump(blk, w=30):
 
 if __name__ == "__main__":
     m = build_system(number_trains=4, number_stages=3)
-    set_inlet_conditions(m.fs.ro_system, Qin=0.154, Cin=0.542)
+    set_inlet_conditions(m.fs.ro_system, Qin=4*0.154, Cin=0.542)
     set_ro_system_op_conditions(m.fs.ro_system)
     add_ro_scaling(m.fs.ro_system)
     initialize_ro_system(m.fs.ro_system)
@@ -642,7 +642,7 @@ if __name__ == "__main__":
 
     print(f"{iscale.jacobian_cond(m.fs.ro_system):.2e}")
     # m.fs.ro_system.recovery.display()
-    # m.fs.ro_system.total_power_consumption.display()
+    m.fs.ro_system.total_power_consumption.display()
     report_pump(m.fs.ro_system, w=40)
 
     # for t in range(1, m.fs.ro_system.number_trains + 1):

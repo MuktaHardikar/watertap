@@ -51,15 +51,14 @@ from watertap.core import Database
 #TODO:
 #1. Unfix the variable energy_electric_flow_vol_inlet
 
-def build_system():
+def build_UF_pumps_system(split_fractions, config = None):
     m = ConcreteModel()
     m.fs = FlowsheetBlock(dynamic=False)
 
-    m.db = Database(dbpath='watertap/flowsheets/flex_desal/wrd/meta_data')
     m.fs.properties = NaClParameterBlock()
     
     m.fs.UF_pumps = FlowsheetBlock(dynamic=False)
-    build_UF_pumps(m.fs.UF_pumps, m.fs.properties)
+    build_UF_pumps(m.fs.UF_pumps, m.fs.properties, split_fractions=split_fractions, config=config)
     
 
     TransformationFactory("network.expand_arcs").apply_to(m)
@@ -67,7 +66,7 @@ def build_system():
     return m
 
 
-def build_UF_pumps(blk, prop_package, number_trains=4) -> None:
+def build_UF_pumps(blk, prop_package, number_trains=3, split_fractions=None, config = None) -> None:
 
     print(f'\n{"=======> BUILDING ULTRAFILTRATION SYSTEM <=======":^60}\n')
 
@@ -77,7 +76,12 @@ def build_UF_pumps(blk, prop_package, number_trains=4) -> None:
     # Get the parent directory of the current directory (one folder prior)
     parent_directory = os.path.dirname(current_directory)
 
-    config = parent_directory + "/meta_data/wrd_uf_pumps_inputs.yaml"
+    print(f"Parent directory: {parent_directory}")
+
+    if config is None:
+        config = parent_directory + "/meta_data/wrd_uf_pumps_inputs.yaml"
+    else:
+        config = '/Users/mhardika/Documents/watertap/watertap/watertap/flowsheets/flex_desal/wrd/meta_data/wrd_uf_pumps_inputs.yaml'
     blk.config_data = load_config(config)
 
     blk.number_trains = number_trains
@@ -102,6 +106,9 @@ def build_UF_pumps(blk, prop_package, number_trains=4) -> None:
         energy_mixing_type=MixingType.extensive,
         momentum_mixing_type=MomentumMixingType.minimize,
     )
+    
+    if split_fractions is None:
+        split_fractions = [1/number_trains for i in range(number_trains)]
 
 
     for i in range(1, (blk.number_trains + 1)):
@@ -114,7 +121,7 @@ def build_UF_pumps(blk, prop_package, number_trains=4) -> None:
 
         # Calculate flow to each pump
         blk.feed_splitter.split_fraction[0, f"pump_{i}_feed"].set_value(
-            1 / number_trains
+            split_fractions[i-1]
         )
         if i != 1:
             blk.feed_splitter.split_fraction[0, f"pump_{i}_feed"].fix()
@@ -143,9 +150,9 @@ def build_UF_pumps(blk, prop_package, number_trains=4) -> None:
         destination=blk.feed_out.inlet,
     )
 
-def set_inlet_conditions(blk, Qin=0.618, Cin=0.542):
+def set_UF_pumps_inlet_conditions(blk, Qin=0.618, Cin=0.542):
     """
-    Set the operation conditions for the RO system
+    Set the operation conditions for the UF pumps
     """
     Qin = (Qin) * pyunits.m**3 / pyunits.s  # Feed flow rate in m3/s
     Cin = Cin * pyunits.g / pyunits.L  # Feed concentration in g/L
@@ -256,12 +263,13 @@ def print_UF_costing_breakdown(blk, debug=False):
         print(blk.unit.costing.display())
 
 
-
 if __name__ == "__main__":
-    file_dir = os.path.dirname(os.path.abspath(__file__))
-    m = build_system()
 
-    set_inlet_conditions(m.fs.UF_pumps)
+    split_fractions = [0.4, 0.4, 0.2]  # Based on ratio of pump capacity to total capacity
+
+    m = build_UF_pumps_system(split_fractions = split_fractions)
+
+    set_UF_pumps_inlet_conditions(m.fs.UF_pumps)
     set_UF_pump_op_conditions(m.fs.UF_pumps)
 
     init_UF_pumps(m.fs.UF_pumps)
