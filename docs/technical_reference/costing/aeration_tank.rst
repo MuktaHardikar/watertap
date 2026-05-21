@@ -31,7 +31,7 @@ Capital cost is dependent upon the unit's volume, :math:`V`, as shown in the equ
 
 .. raw:: html
    
-   <iframe src="../../_static/interactive_cost_plots/interactive_cost_function.html" width="1000" height="600"></iframe>
+   <iframe src="../../_static/interactive_cost_plots/aeration_tank.html" width="1000" height="600"></iframe>
 
 
  
