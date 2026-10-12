@@ -1,7 +1,6 @@
 # WaterTAP Tutorials & Examples
 
 This directory contains tutorial Jupyter notebooks for WaterTAP.
-# WaterTAP Tutorials
 
 ## Basic
 
