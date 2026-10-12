@@ -10,6 +10,8 @@
 # "https://github.com/watertap-org/watertap/"
 #################################################################################
 
+import os
+
 import pyomo.environ as pyo
 from pyomo.common.config import ConfigValue
 
@@ -23,6 +25,7 @@ from idaes.models.unit_models import Mixer, HeatExchanger, Heater, CSTR
 from idaes.core.util.exceptions import ConfigurationError
 
 import idaes.logger as idaeslog
+import yaml
 
 from watertap.core.util.misc import is_constant_up_to_units
 from watertap.costing.unit_models.mixer import cost_mixer
@@ -81,7 +84,7 @@ class WaterTAPCostingBlockData(FlowsheetCostingBlockData):
         # Boolean to track if the base currency and period have been defined
         self._base_currency_period_defined = False
 
-        if "case_study_definition" in self.config:
+        if self.config.case_study_definition is not None:
             # it is a ZeroOrderCosting block, so we preferentially
             # use the values from the _cs_def if available
             if "base_currency" in self._cs_def:
@@ -999,3 +1002,99 @@ class WaterTAPCostingDetailedData(WaterTAPCostingBlockData):
 
         self.aggregate_costs()
         self.build_process_costs()
+
+
+@declare_process_block_class("UnifiedWaterTAPCosting")
+class UnifiedWaterTAPCostingData(WaterTAPCostingDetailedData):
+    """
+    General costing package for all units processes.
+    """
+
+    CONFIG = WaterTAPCostingDetailedData.CONFIG()
+    CONFIG.declare(
+        "case_study_definition",
+        ConfigValue(
+            default=None,
+            doc="Path to YAML file defining global parameters for case study. If "
+            "not provided, default values from the WaterTAP database are used.",
+        ),
+    )
+
+    def register_currency_definitions(self):
+        # Register currency and conversion rates
+        if self.config.case_study_definition is not None:
+            self._cs_def = _load_case_study_definition(self)
+            if "currency_definitions" in self._cs_def:
+                pyo.units.load_definitions_from_strings(
+                    self._cs_def["currency_definitions"]
+                )
+            else:
+                register_idaes_currency_units()
+        else:
+            register_idaes_currency_units()
+
+    def build_global_params(self):
+        """
+        To minimize overhead, only create global parameters for now.
+        Unit-specific parameters will be added as sub-Blocks on a case-by-case
+        basis as a unit of that type is costed.
+        """
+        super().build_global_params()
+
+        if self.config.case_study_definition is not None:
+            # Load case study definition from file
+            self._cs_def = _load_case_study_definition(self)
+            # Define expected flows
+            for f, v in self._cs_def["defined_flows"].items():
+                value = v["value"]
+                units = getattr(pyo.units, v["units"])
+                if self.component(f + "_cost") is not None:
+                    self.component(f + "_cost").fix(value * units)
+                else:
+                    self.defined_flows[f] = value * units
+
+            # Fix all Vars from database
+            for v in self._cs_def["global_parameters"]:
+                try:
+                    value = self._cs_def["global_parameters"][v]["value"]
+                    units = self._cs_def["global_parameters"][v]["units"]
+                    getattr(self, v).fix(value * getattr(pyo.units, units))
+                except KeyError:
+                    raise KeyError(
+                        f"Invalid case study definition file - no entry found "
+                        f"for {v}, or entry lacks value and units."
+                    )
+            # this variable floats in this package, so initialize it appropriately here
+            calculate_variable_from_constraint(
+                self.capital_recovery_factor,
+                self.capital_recovery_factor_constraint,
+            )
+
+
+
+def _load_case_study_definition(self):
+    """
+    Load data from case study definition file into a Python dict.
+    If users did not provide a definition file as a config argument, the
+    default definition from the WaterTap techno-economic database is used.
+    """
+    source_file = self.config.case_study_definition
+    if source_file is None:
+        source_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..",
+            "data",
+            "techno_economic",
+            "default_case_study.yaml",
+        )
+
+    try:
+        with open(source_file, "r") as f:
+            lines = f.read()
+            f.close()
+    except OSError:
+        raise OSError(
+            "Could not find specified case study definition file. "
+            "Please check the path provided."
+        )
+    return yaml.load(lines, yaml.Loader)
