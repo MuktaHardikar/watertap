@@ -14,7 +14,7 @@ This directory contains tutorial Jupyter notebooks for WaterTAP.
 - [Using a Simple Unit Model](./using_a_simple_unit_model.ipynb)
   > A quick introduction to using a simple unit model in WaterTAP. Unit models are modeled separately from property models, lending to the modularity and flexibility of modeling in WaterTAP.
 
-- [Introduction to the Reverse Osmosis Unit Model](./ro/reverse_osmosis_0D.ipynb)
+- [Introduction to the Reverse Osmosis Unit Model](./reverse_osmosis_0D.ipynb)
   > An introduction to using WaterTAP's reverse osmosis model with its simplest configuration settings. Usage of the isothermal NaCl property model is also demonstrated.
 
 - [Introduction to the Low-salt-rejection Reverse Osmosis (LSRRO) Flowsheet Model](./lsrro.ipynb)
@@ -45,7 +45,7 @@ This directory contains tutorial Jupyter notebooks for WaterTAP.
 - [OLI Calculations in WaterTAP](./oli_calculations.ipynb)
   > A tutorial that shows how to login and make calls to the OLI Cloud API for advanced aqueous chemistry calculations. **Note:** an OLI license is required to fully run this tutorial and  any OLI API functionality within WaterTAP.
 
-- [Parameter Sweep Tool: Getting Started](./parameter_sweep_demo.ipynb)
+- [Parameter Sweep Tool: Getting Started](./parameter_sweep_demo/parameter_sweep_demo.ipynb)
   > A tutorial on using WaterTAP's "parameter sweep," an analysis tool for performing optimization, sensitivity analyses, and uncertainty quantification.
 
 - [Unit Model Customization](./unit_model_customization_example.ipynb)
