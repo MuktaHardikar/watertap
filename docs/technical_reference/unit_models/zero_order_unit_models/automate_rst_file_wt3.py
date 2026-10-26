@@ -222,7 +222,7 @@ def grab_unit_components_feed(unit_class):
     )
 
 
-df = pd.read_csv("WT3_unit_classification_for_doc.csv")
+df = pd.read_csv(os.path.join(sidor_db_path, "WT3_unit_classification_for_doc.csv"))
 
 unit_name_list = [i.title() for i in df["Name"]]
 model_type_list = df["model type long"]
@@ -267,11 +267,53 @@ costing_exceptions = {}
 p_subtype_exceptions = {"MetabZO": "hydrogen"}
 has_subtype = {}
 
+additional_costing_details = [
+    "anaerobic_mbr_mec_zo",
+    "ozone_zo",
+    "peracetic_acid_disinfection_zo",
+    "photothermal_membrane_zo",
+    "pump_electricity_zo",
+    "sedimentation_zo",
+    "storage_tank_zo",
+    "struvite_classifier_zo",
+    "suboxic_activated_sludge_zo",
+    "supercritical_salt_precipitation_zo",
+    "surface_discharge_zo",
+    "uv_aop_zo",
+    "uv_zo",
+    "vfa_recovery_zo",
+    "well_field_zo"
+    ]
+
+
+def extract_costing_details(cost_func):
+    with open(os.path.join(sidor_db_path, "zo_costing_functions.rst"), "r") as f:
+        # Read lines
+        lines = f.read()
+
+        # Start and end indices for the costing details section
+        start_index = lines.find(f".. start_{cost_func}_costing")
+        end_index = lines.find(f".. end_{cost_func}_costing")
+
+        costing_details = "".join(lines[start_index:end_index])
+
+    return costing_details
+
+
+def create_costing_rst_section(cost_func):
+    section = extract_costing_details(cost_func)
+
+    output = f"""
+        {section}
+        """
+
+    return output
+
 
 if __name__ == "__main__":
 
     # Create index file for all zero order model docs
-    with open("index.rst", "w") as f:
+    with open(os.path.join(sidor_db_path, "index.rst"), "w") as f:
         f.write("Zero-Order Unit Models\n")
         f.write("=" * len("Zero-Order Unit Models"))
         f.write("\n")
@@ -300,10 +342,15 @@ if __name__ == "__main__":
         ]
 
         # append unit doc to index
-        with open("index.rst", "a") as f:
+        with open(os.path.join(sidor_db_path, "index.rst"), "a") as f:
             f.write(f"   {zo_name_list[i]}\n")
 
-        with open(f"{zo_name_list[i]}.rst", "w", encoding="utf-8") as f:
+        with open(
+            os.path.join(sidor_db_path, f"{zo_name_list[i]}.rst"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(f".. _{zo_name_list[i]}:\n\n")
             # write doc title based on unit name
             if zo_name_list[i] in title_exceptions:
                 f.write(f"{title_exceptions[zo_name_list[i]]} (ZO)")
@@ -463,3 +510,7 @@ if __name__ == "__main__":
                 f.write(f"\n\n{list[6]}\n")
                 f.write("    :members:\n")
                 f.write("    :noindex:\n")
+
+    # append the zo_function to index
+    with open(os.path.join(sidor_db_path, "index.rst"), "a") as f:
+        f.write(f"   zo_costing_functions\n")

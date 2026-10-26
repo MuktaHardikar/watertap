@@ -18,6 +18,24 @@ Costing Method
 Costing is calculated using the :py:meth:`~watertap.unit_models.zero_order.uv_zo.UVZOData.cost_uv` method.
 For full details on costing, see documentation for the :ref:`zero-order costing package<zero_order_costing>`.
 
+        .. start_uv_zo_costing
+
+UV capital cost is calculated using the following equations:
+
+.. math:: 
+   C_{capital} = Cost\ Factor * (A * Q + B * Electricity)
+
+.. csv-table::
+   :header: "Description", "Variable Name", "Units"
+
+   "Capital cost of the UV system", ":math:`C_{capital}`", "USD"
+   "Reactor cost determined from cost data", ":math:`A`", "USD/:math:`m^{3}/h`"
+   "Lamp cost determined from cost data", ":math:`B`", "USD/kW"
+   "Volumetric flow rate of the influent water", ":math:`Q`", ":math:`m^{3}/h`"
+   "Electricity ", "", "kW"
+
+
+        
 Additional Variables
 --------------------
 

@@ -18,6 +18,22 @@ Costing Method
 Costing is calculated using the :py:meth:`~watertap.unit_models.zero_order.vfa_recovery_zo.VFARecoveryZOData.cost_vfa_recovery` method.
 For full details on costing, see documentation for the :ref:`zero-order costing package<zero_order_costing>`.
 
+        .. start_vfa_recovery_zo_costing
+
+Capital cost is calculated using the following equation.
+
+.. math:: 
+   C_{capital} = Cost\ Factor * (Unit\_Capex * Q)
+
+.. csv-table::
+   :header: "Description", "Variable Name", "Units"
+
+   "Capital cost of the VFA recovery unit", ":math:`C_{capital}`", "USD"
+   "Capital cost per unit flow of the VFA recovery unit", "Unit\_Capex", "USD/(L/day)"
+   "Volumetric flow rate of the influent water", ":math:`Q`", ":math:`L/day`"
+
+
+        
 Additional Variables
 --------------------
 
