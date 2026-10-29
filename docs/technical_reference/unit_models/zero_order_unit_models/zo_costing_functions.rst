@@ -18,12 +18,12 @@ Anaerobic MBR MEC capital cost and operating cost is calculated using the follow
 .. csv-table::
    :header: "Description", "Variable Name", "Units"
 
-   "Capital cost of the anaerobic MBR MEC", "C_{capital}", ":math:`USD`"
-   "Fixed operating cost of the anaerobic MBR MEC", "C_{fixed\_opex}", ":math:`USD`"
-   "Scaling factor to adjust the capital cost based on the size of the system", "Cost\ Factor", ":math:`USD`"
-   "Capital cost per unit flow of the anaerobic MBR MEC", "Unit\_Capex", ":math:`USD/(L/day)`"
-   "Operating cost per unit flow of the anaerobic MBR MEC", "Unit\_Opex", ":math:`USD/(L/day)`"
-   "Volumetric flow rate of the influent water", "Q", ":math:`m^{3}/h`"
+   "Capital cost of the anaerobic MBR MEC", ":math:`C_{capital}`", ":math:`USD`"
+   "Fixed operating cost of the anaerobic MBR MEC", ":math:`C_{fixed\_opex}`", ":math:`USD`"
+   "Scaling factor to adjust the capital cost based on the size of the system", ":math:`Cost\ Factor`", ":math:`USD`"
+   "Capital cost per unit flow of the anaerobic MBR MEC", ":math:`Unit\_Capex`", ":math:`USD/(L/day)`"
+   "Operating cost per unit flow of the anaerobic MBR MEC", ":math:`Unit\_Opex`", ":math:`USD/(L/day)`"
+   "Volumetric flow rate of the influent water", ":math:`Q`", ":math:`m^{3}/h`"
 
 .. end_anaerobic_mbr_mec_zo_costing
 
