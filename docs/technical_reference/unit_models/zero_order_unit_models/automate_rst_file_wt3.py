@@ -420,6 +420,9 @@ if __name__ == "__main__":
                 f.write("-" * len("Costing Method"))
                 if not cost_func_list[i]:
                     f.write("\nThis unit does not include costing.\n")
+                elif zo_name_list[i] in additional_costing_details:
+                    output = create_costing_rst_section(zo_name_list[i])
+                    f.write(output)
                 else:
                     m, *_ = grab_unit_components(class_name_list[i], i)
                     costing_method = m.fs.unit.default_costing_method

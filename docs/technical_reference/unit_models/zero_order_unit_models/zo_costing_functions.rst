@@ -1,7 +1,7 @@
 ZO Costing Functions
 ====================
 
-Costing functions for zero-order unit models that do not follow power law..
+Costing functions for zero-order unit models that do not follow power law.
 
 anaerobic_mbr_mec_zo
 --------------------
@@ -59,68 +59,68 @@ Ozone capital cost is calculated using the following equations.
 
 peracetic_acid_disinfection_zo
 ------------------------------
-.. start_peracetic_acid_disinfection_zo
+.. start_peracetic_acid_disinfection_zo_costing
 
 
 
-.. end_peracetic_acid_disinfection_zo
+.. end_peracetic_acid_disinfection_zo_costing
 
 
 photothermal_membrane_zo
 ------------------------
-.. start_photothermal_membrane_zo
+.. start_photothermal_membrane_zo_costing
 
 
 
-.. end_photothermal_membrane_zo
+.. end_photothermal_membrane_zo_costing
 
 pump_electricity_zo
 -------------------
-.. start_pump_electricity_zo
+.. start_pump_electricity_zo_costing
 
 
 
-.. end_pump_electricity_zo
+.. end_pump_electricity_zo_costing
 
 
 sedimentation_zo
 ----------------
-.. start_sedimentation_zo
+.. start_sedimentation_zo_costing
 
 
 
-.. end_sedimentation_zo
+.. end_sedimentation_zo_costing
 
 
 storage_tank_zo
 ---------------
-.. start_storage_tank_zo
+.. start_storage_tank_zo_costing
 
 
 
-.. end_storage_tank_zo
+.. end_storage_tank_zo_costing
 
 
 struvite_classifier_zo
 ----------------------
-.. start_struvite_classifier_zo
+.. start_struvite_classifier_zo_costing
 
 
 
-.. end_struvite_classifier_zo
+.. end_struvite_classifier_zo_costing
 
 suboxic_activated_sludge_zo
 ---------------------------
-.. start_suboxic_activated_sludge_zo
+.. start_suboxic_activated_sludge_zo_costing
 
 
 
-.. end_suboxic_activated_sludge_zo
+.. end_suboxic_activated_sludge_zo_costing
 
 
 supercritical_salt_precipitation_zo
 -----------------------------------
-.. start_supercritical_salt_precipitation_zo
+.. start_supercritical_salt_precipitation_zo_costing
 
 Capital cost is calculated using the following equations:
 
@@ -137,7 +137,7 @@ Capital cost is calculated using the following equations:
    "Base volumetric flowrate", ":math:`C`", ":math:`lb/hr`"
    "Scaling exponent", ":math:`D`", ":math:`Dimensionless`"
 
-.. end_supercritical_salt_precipitation_zo
+.. end_supercritical_salt_precipitation_zo_costing
 
 
 surface_discharge_zo
@@ -165,7 +165,7 @@ Surface discharge capital cost is calculated using the following equations:
    "Reference volumetric flow rate of the influent water", ":math:`Q_{ref}`", ":math:`m^{3}/day`"
    "Coefficients determined from cost data", ":math:`A, B`", ":math:`USD, Dimensionless`"
 
-..  end_surface_discharge_zo_costing
+.. end_surface_discharge_zo_costing
 
 uv_aop_zo
 ---------
